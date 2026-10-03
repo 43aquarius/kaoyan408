@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// 用户做题记录（本地默认访客，预留扩展）
+model User {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  records   Record[]
+  favorites Favorite[]
+  mocks     MockExam[]
+}
+
+/// 单题作答记录
+model Record {
+  id         String   @id @default(cuid())
+  userId     String
+  questionId String
+  /// 用户作答：单选为 "A"~"D"，应用题为自评（correct/wrong/shrug）
+  userAnswer String
+  isCorrect  Boolean
+  /// 模式：practice=刷题 mock=模考 wrong=错题重刷
+  mode       String   @default("practice")
+  mockId     String?
+  timeMs     Int      @default(0)
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, questionId])
+  @@index([userId, createdAt])
+  @@index([userId, mode])
+}
+
+/// 收藏
+model Favorite {
+  id         String   @id @default(cuid())
+  userId     String
+  questionId String
+  note       String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+}
+
+/// 模考成绩
+model MockExam {
+  id         String   @id @default(cuid())
+  userId     String
+  /// 试卷标题，如 "2020 全真模考"
+  title      String
+  /// 试卷题目 ID 列表（JSON 数组字符串）
+  questionIds String
+  /// 用户答案（JSON: {questionId: answer}）
+  answers    String   @default("{}")
+  /// 每题对错（JSON: {questionId: boolean}）
+  results    String   @default("{}")
+  score      Int      @default(0)
+  totalScore Int      @default(0)
+  correctCnt Int      @default(0)
+  totalCnt   Int      @default(0)
+  durationMs Int      @default(0)
+  finished   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
