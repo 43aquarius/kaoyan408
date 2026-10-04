@@ -111,3 +111,55 @@ Work Log:
 Stage Summary:
 - 题库 846 题全量交付；经验笔记 13 章上线；年份筛选 bug 修复
 - 仓库推送后项目完整交付
+
+---
+Task ID: 21
+Agent: main
+Task: 注册登录 + 做题记录持久化（用户需求1）
+
+Work Log:
+- Prisma：User 加 password String?（scrypt "salt:hash"，null=访客）；db push + 重启 dev server 加载新 Prisma Client
+- src/lib/server.ts 重构：scrypt 密码哈希/校验、HMAC 会话令牌（httpOnly cookie 408_session，30天）、getSessionUser、getVisitorId 内部改为"登录账号优先、访客回退"（保持原签名 → progress/favorite/mock 三 API 零改动即支持账号）、mergeGuestData（登录/注册时把访客 records/favorites/mocks 并入账号）、validUsername
+- 新增 API：/api/auth/{register,login,logout,me}；注册成功自动登录+合并访客数据
+- 前端：client.ts 加 useAuth/loginRequest/registerRequest/logoutRequest；AuthDialog（登录/注册双tab，程序员风）；Navbar 用户区（用户名chip+登出 / 登录按钮，移动端菜单同步）
+- 修复存量 bug：题库 InlineAnswer 只改本地 state 从不 submitRecord（题库做题不落库）→ 接入 submitRecord+bumpProgress，综合题加"做出来了/没做出来"自评按钮
+- 验证：scripts/test-auth.sh 15/15 通过（注册/登录/登出/重名拒绝/错误密码拒绝/访客合并/数据隔离/持久化）；浏览器 E2E：注册→题库答题→登出→再登录→首页进度卡"计网1次作答"恢复 ✓，无 console 错误；tsc(src)/lint 零错误；测试数据已清理
+
+Stage Summary:
+- 账号体系上线：未登录仍可访客刷题，登录自动合并数据，记录持久化到 SQLite，跨登录会话保留
+- dev server 改为 setsid 手动守护（系统自动重启在该沙箱不生效）
+
+---
+Task ID: 22
+Agent: main
+Task: 10套全真模拟卷470题（用户需求2/3：扩题量+逐项精讲模拟卷）——架构与生成流水线
+
+Work Log:
+- 架构：Question 类型扩展 mockNo/optionAnalysis{A,B,C,D}/image/animation（AnimStep: array+pointers+highlights/stack/tree/table）；mocks 骨架 src/data/mocks/m01-m10（a/b/c/d/e/f 六段式）+ 根 index（MOCKS 元数据 10 套、ALL_MOCK_QUESTIONS）；year=2027，全局 ALL_QUESTIONS 并入，getQuestionsBy 支持 "m1"-"m10" 单套筛选
+- 组件：StepPlayer（数组/指针/栈/二叉树SVG/表格 五种可视化+自动播放）、QuestionExtras（逐项解析块+配图+动画）接入 practice/library/mock 三视图
+- UI：MockView 第三模式"模拟卷"（10套卡片+星级+focus）；题库年份下拉含模拟卷分组；YearBadge 显示"模拟卷·第N套"；首页/footer/stats 文案适配（真题846+模拟470）
+- 校验：validate-questions.ts 新增 --mock N 模式（47题/40单选/7综合、no 1-47 不重不漏、科目区间硬校验 ds1-11 co12-22 os23-31 cn32-40、综合分值 41-47 = 15/8/13/10/9/8/7、每科总分=官方45/45/35/25、单选 optionAnalysis 四键≥12字、image 文件存在、动画≥3步含可视化数据）
+- 生成规范：scripts/mock-agent-spec.md（数据格式/红线/逐项解析标准/matplotlib 中文字体规范/动画JSON格式/自检命令）
+- 流水线教训：①4并行超时3个、3并行超时（综合题重的任务死在写入前）→ 拆为6段式（a=12单选/b=12单选/c=12单选/d=6题含2综合/e=3综合/f=2综合），提示词强调"先写文件后汇报"→ 稳定 3 并行全成功 ②超时代理常已写完文件（先查产出再重派）③每段考点/难度/id/no 清单直接写在提示词里
+- 进度：m01 ✓47题（4图3动画，校验通过）、m02 ✓（校验通过）、m03-a ✓
+- 每套标准结构：ds 单选1-11+41(15)+42(8)；co 12-22+43(13)+44(10)；os 23-31+45(9)+46(8)；cn 32-40+47(7)
+
+Stage Summary:
+- 流水线已验证：每轮 3 个轻任务（12单选/6题含2综合/3综合/2综合），全部成功
+- 待办：m03-b/c/d/e/f + m04-m10 全部段落（约 47 个任务）→ 全量校验 → E2E → git push
+
+---
+Task ID: 23
+Agent: main
+Task: 10套模拟卷生成完成 + 终验
+
+Work Log:
+- 40 个内容子代理全部完成（6段式：a=12单选/b=12单选/c=12单选/d=6题含2综合/e=3综合/f=2综合；约8次超时但大部分已写入文件、4次重派成功）
+- 10 套全部通过 --mock 校验：47题/40单选/7综合、科目分值=官方45/45/35/25、逐项解析 40/40 全覆盖
+- 全库终态：1316 题（18年真题846 + 10套模拟470），单选1120/综合196，1378个知识点标签
+- tsc(src) 零错误、lint 通过、10套 --mock 校验全绿
+- 修正：校验脚本 HTML 正则误报（<A,C> 有向图弧记法）；spec 字体路径（NotoSansSC[wght].ttf 不存在 → SarasaMonoSC-Regular.ttf）
+
+Stage Summary:
+- 模拟卷交付：470 题、400条逐项解析、约35张 matplotlib 配图、约28个逐步动画（StepPlayer：数组/指针/栈/二叉树/表格）
+- 剩余：浏览器E2E → README → git push

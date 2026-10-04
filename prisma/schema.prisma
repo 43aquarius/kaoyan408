@@ -7,10 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// 用户做题记录（本地默认访客，预留扩展）
+/// 用户（注册账号可登录；访客无密码）
 model User {
   id        String   @id @default(cuid())
   name      String   @unique
+  /// 登录密码哈希（scrypt "salt:hash"）；null = 匿名访客
+  password  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   records   Record[]

@@ -60,3 +60,4 @@ server.log
 /tests/
 /download/
 /db/*.db
+db/

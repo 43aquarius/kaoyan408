@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Markdown } from "@/components/site/markdown";
+import { QuestionExtras } from "@/components/site/question-extras";
 import { SubjectBadge, TypeBadge, DifficultyBadge, YearBadge } from "@/components/site/badges";
 import { useApp } from "@/lib/store";
 import { useProgress, submitRecord, toggleFavorite } from "@/lib/client";
@@ -191,7 +192,7 @@ export function PracticeView() {
         <div className="rounded-xl border bg-card p-5 sm:p-6">
           <div className="mb-3 flex flex-wrap items-center gap-1.5">
             <SubjectBadge subject={q.subject} />
-            <YearBadge year={q.year} />
+            <YearBadge year={q.year} mockNo={q.mockNo} />
             <TypeBadge type={q.type} />
             <DifficultyBadge level={q.difficulty} />
             <span className="font-mono text-[11px] text-muted-foreground">{q.score} 分 · {q.id}</span>
@@ -277,6 +278,7 @@ export function PracticeView() {
               <div className="mb-1.5 text-sm font-semibold">解析</div>
               <Markdown content={q.analysis} />
             </div>
+            <QuestionExtras q={q} />
           </div>
         )}
       </div>

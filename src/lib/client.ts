@@ -179,3 +179,81 @@ export function formatNumber(n: number): string {
   if (n >= 10000) return `${(n / 1000).toFixed(1)}k`;
   return n.toLocaleString("en-US");
 }
+
+/* ==================== 注册 / 登录 ==================== */
+
+export interface AuthUser {
+  name: string;
+  createdAt: string;
+}
+
+interface AuthResult {
+  ok: boolean;
+  error?: string;
+  user?: AuthUser;
+}
+
+async function authPost(path: string, body: Record<string, unknown>): Promise<AuthResult> {
+  try {
+    const r = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return (await r.json()) as AuthResult;
+  } catch {
+    return { ok: false, error: "网络异常，请稍后重试" };
+  }
+}
+
+export function loginRequest(name: string, password: string) {
+  return authPost("/api/auth/login", { name, password });
+}
+
+export function registerRequest(name: string, password: string) {
+  return authPost("/api/auth/register", { name, password });
+}
+
+export async function logoutRequest(): Promise<void> {
+  try {
+    await fetch("/api/auth/logout", { method: "POST" });
+  } catch {
+    /* ignore */
+  }
+}
+
+/** 当前登录用户（null = 访客模式） */
+export function useAuth() {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((j) => {
+        if (!alive) return;
+        setUser(j?.ok ? (j.data?.user ?? null) : null);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  /** 事件处理器中手动刷新（登录/登出后调用） */
+  const refresh = useCallback(async () => {
+    try {
+      const r = await fetch("/api/auth/me");
+      const j = await r.json();
+      setUser(j?.ok ? (j.data?.user ?? null) : null);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  return { user, loading, refresh };
+}

@@ -25,7 +25,7 @@ export function Footer() {
             </p>
             <p className="flex items-center gap-1 text-xs text-muted-foreground">
               <Database className="h-3 w-3" />
-              已收录 {YEARS.length} 年 · {ALL_QUESTIONS.length} 题
+              已收录 {YEARS.length - 1} 年真题 + 10 套模拟卷 · {ALL_QUESTIONS.length} 题
             </p>
           </div>
 

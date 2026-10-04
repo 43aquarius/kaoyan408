@@ -7,17 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Markdown } from "@/components/site/markdown";
+import { QuestionExtras } from "@/components/site/question-extras";
 import { SubjectBadge, TypeBadge, DifficultyBadge, YearBadge, FavoriteButton } from "@/components/site/badges";
 import { useApp, type LibFilters } from "@/lib/store";
-import { useProgress, toggleFavorite } from "@/lib/client";
+import { useProgress, toggleFavorite, submitRecord } from "@/lib/client";
 import {
   ALL_QUESTIONS,
-  YEARS,
+  REAL_YEARS,
   ALL_TAGS,
   getQuestionsBy,
   type Question,
 } from "@/data/questions";
 import { DIFFICULTY_LABEL } from "@/data/questions/types";
+import { MOCKS } from "@/data/mocks";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
@@ -85,7 +87,7 @@ export function LibraryView() {
             题库 <span className="font-mono text-base font-normal text-muted-foreground">/ questions</span>
           </h1>
           <p className="mt-1 text-xs text-muted-foreground">
-            {YEARS.length} 年 · {ALL_QUESTIONS.length} 道真题原题 · 文字化整理版
+            {REAL_YEARS.length} 年真题 + {MOCKS.length} 套模拟卷 · 共 {ALL_QUESTIONS.length} 题 · 逐项解析
           </p>
         </div>
         <Button onClick={startFilterPractice} disabled={filtered.length === 0} className="gap-1.5">
@@ -100,11 +102,17 @@ export function LibraryView() {
           <Filter className="h-4 w-4 text-muted-foreground" />
           {/* 年份 */}
           <Select value={libFilters.year} onValueChange={(v) => updateFilters({ year: v })}>
-            <SelectTrigger className="h-8 w-[104px] text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8 w-[118px] text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部年份</SelectItem>
-              {[...YEARS].sort((a, b) => b - a).map((y) => (
+              {[...REAL_YEARS].sort((a, b) => b - a).map((y) => (
                 <SelectItem key={y} value={String(y)}>{y} 年</SelectItem>
+              ))}
+              <SelectItem value="2027" className="font-medium">模拟卷（全部）</SelectItem>
+              {MOCKS.map((m) => (
+                <SelectItem key={m.no} value={`m${m.no}`}>
+                  {m.title}·{m.subtitle}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -265,7 +273,7 @@ function QuestionRow({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <SubjectBadge subject={q.subject} />
-            <YearBadge year={q.year} />
+            <YearBadge year={q.year} mockNo={q.mockNo} />
             <TypeBadge type={q.type} />
             <DifficultyBadge level={q.difficulty} />
             <span className="font-mono text-[11px] text-muted-foreground">{q.score} 分</span>
@@ -302,6 +310,13 @@ function QuestionRow({
 function InlineAnswer({ q }: { q: Question }) {
   const [picked, setPicked] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [selfEvaluated, setSelfEvaluated] = useState(false);
+  const bumpProgress = useApp((s) => s.bumpProgress);
+
+  const submit = (userAnswer: string, isCorrect: boolean) => {
+    submitRecord({ questionId: q.id, userAnswer, isCorrect, mode: "practice" });
+    bumpProgress();
+  };
 
   return (
     <div className="space-y-3">
@@ -317,8 +332,10 @@ function InlineAnswer({ q }: { q: Question }) {
                 key={letter}
                 disabled={revealed}
                 onClick={() => {
+                  if (revealed) return;
                   setPicked(letter);
                   setRevealed(true);
+                  submit(letter, letter === q.answer);
                 }}
                 className={cn(
                   "flex w-full items-start gap-2.5 rounded-lg border p-3 text-left text-sm transition-all",
@@ -353,6 +370,34 @@ function InlineAnswer({ q }: { q: Question }) {
         )
       )}
 
+      {q.type === "application" && revealed && !selfEvaluated && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground">对照后自评：</span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1 border-emerald-500/50 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
+            onClick={() => {
+              setSelfEvaluated(true);
+              submit("correct", true);
+            }}
+          >
+            ✓ 做出来了
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1 border-rose-500/50 text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/50"
+            onClick={() => {
+              setSelfEvaluated(true);
+              submit("wrong", false);
+            }}
+          >
+            ✗ 没做出来
+          </Button>
+        </div>
+      )}
+
       {revealed && (
         <div className="space-y-3 rounded-lg border bg-muted/30 p-4 fade-in-up">
           {q.type === "single" ? (
@@ -377,6 +422,7 @@ function InlineAnswer({ q }: { q: Question }) {
             <div className="mb-1 font-semibold">解析</div>
             <Markdown content={q.analysis} />
           </div>
+          <QuestionExtras q={q} />
         </div>
       )}
     </div>

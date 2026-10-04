@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, GraduationCap, LayoutGrid, Menu, NotebookPen, PenTool, ChartPie, RotateCcw, X } from "lucide-react";
+import { BookOpen, GraduationCap, LayoutGrid, LogIn, LogOut, Menu, NotebookPen, PenTool, ChartPie, RotateCcw, UserRound, X } from "lucide-react";
 import { useApp, type View } from "@/lib/store";
+import { useAuth, logoutRequest } from "@/lib/client";
+import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "./theme-toggle";
 import { GitHubCounter } from "./github-counter";
+import { AuthDialog } from "./auth-dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -19,8 +22,11 @@ const NAV_ITEMS: { key: View; label: string; icon: React.ComponentType<{ classNa
 ];
 
 export function Navbar() {
-  const { view, go, practice } = useApp();
+  const { view, go, practice, bumpProgress } = useApp();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const { user, refresh } = useAuth();
+  const { toast } = useToast();
 
   const handleNav = (v: View) => {
     if (v === "practice" && !practice) {
@@ -29,6 +35,18 @@ export function Navbar() {
       return;
     }
     go(v);
+  };
+
+  const handleLogout = async () => {
+    await logoutRequest();
+    await refresh();
+    bumpProgress();
+    toast({ title: "已退出登录", description: "做题记录已保存在账号中，下次登录继续" });
+  };
+
+  const handleAuthSuccess = async () => {
+    await refresh();
+    bumpProgress();
   };
 
   return (
@@ -72,6 +90,37 @@ export function Navbar() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
+          {user ? (
+            <div className="flex items-center gap-1">
+              <span
+                className="hidden max-w-[120px] items-center gap-1.5 truncate rounded-full border bg-accent/50 px-2.5 py-1 font-mono text-xs text-foreground sm:flex"
+                title={`已登录：${user.name}`}
+              >
+                <UserRound className="h-3 w-3 shrink-0 text-primary" />
+                {user.name}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                onClick={handleLogout}
+                aria-label="退出登录"
+                title="退出登录"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1.5"
+              onClick={() => setAuthOpen(true)}
+            >
+              <LogIn className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">登录</span>
+            </Button>
+          )}
           <div className="hidden sm:block">
             <GitHubCounter compact />
           </div>
@@ -91,6 +140,26 @@ export function Navbar() {
 
       {mobileOpen && (
         <nav className="border-t bg-background px-4 py-2 md:hidden" aria-label="移动端导航">
+          {user ? (
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground"
+            >
+              <LogOut className="h-4 w-4" />
+              退出登录（{user.name}）
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setMobileOpen(false);
+                setAuthOpen(true);
+              }}
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground"
+            >
+              <LogIn className="h-4 w-4" />
+              登录 / 注册
+            </button>
+          )}
           {NAV_ITEMS.map((item) => (
             <button
               key={item.key}
@@ -109,6 +178,8 @@ export function Navbar() {
           ))}
         </nav>
       )}
+
+      <AuthDialog open={authOpen} onOpenChange={setAuthOpen} onSuccess={handleAuthSuccess} />
     </header>
   );
 }

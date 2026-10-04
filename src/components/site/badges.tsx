@@ -37,14 +37,29 @@ export function DifficultyBadge({ level }: { level: number }) {
   );
 }
 
-export function YearBadge({ year }: { year: number }) {
+export function YearBadge({ year, mockNo }: { year: number; mockNo?: number }) {
   const recall = RECALL_YEARS.includes(year);
+  const isMock = mockNo !== undefined || year === 2027;
   return (
     <span
       className="inline-flex items-center rounded-md border font-mono text-[11px] font-semibold text-muted-foreground px-1.5 py-0.5"
-      title={recall ? "考试较新，暂无完整真题资料，本卷为回忆版" : undefined}
+      title={
+        isMock
+          ? "全真模拟卷（本站自研，含逐项解析/图示/动画讲解）"
+          : recall
+            ? "考试较新，暂无完整真题资料，本卷为回忆版"
+            : undefined
+      }
     >
-      {year} 真题{recall ? "·回忆版" : ""}
+      {isMock ? (
+        <>
+          模拟卷{mockNo ? `·第${mockNo}套` : ""}
+        </>
+      ) : (
+        <>
+          {year} 真题{recall ? "·回忆版" : ""}
+        </>
+      )}
     </span>
   );
 }

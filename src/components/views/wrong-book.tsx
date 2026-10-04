@@ -111,7 +111,7 @@ export function WrongBookView() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <SubjectBadge subject={q!.subject} />
-                      <YearBadge year={q!.year} />
+                      <YearBadge year={q!.year} mockNo={q!.mockNo} />
                       <TypeBadge type={q!.type} />
                       <DifficultyBadge level={q!.difficulty} />
                       <span className="font-mono text-[11px] text-muted-foreground">{q!.id}</span>

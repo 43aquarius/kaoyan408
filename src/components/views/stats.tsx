@@ -82,14 +82,21 @@ export function StatsView() {
       });
     }
 
-    // 各年份完成度
+    // 各年份完成度（2027 = 模拟卷合集）
     const byYear = [...YEARS]
       .sort((a, b) => a - b)
       .map((y) => {
         const all = getQuestionsBy({ year: y });
         const done = all.filter((q) => recordMap.has(q.id)).length;
         const correct = all.filter((q) => recordMap.get(q.id)?.correct).length;
-        return { year: y, total: all.length, done, correct, pct: Math.round((done / all.length) * 100) };
+        return {
+          year: y,
+          label: y === 2027 ? "模拟卷" : String(y),
+          total: all.length,
+          done,
+          correct,
+          pct: Math.round((done / all.length) * 100),
+        };
       });
 
     // 难度分布（已做）
@@ -289,7 +296,7 @@ export function StatsView() {
                 {stats.byYear.map((y) => (
                   <div key={y.year} className="flex items-center gap-3">
                     <span className="w-10 shrink-0 font-mono text-xs font-semibold text-muted-foreground">
-                      {y.year}
+                      {y.label}
                     </span>
                     <Progress value={y.pct} className="h-2 flex-1" />
                     <span className="w-20 shrink-0 text-right font-mono text-[11px] text-muted-foreground">

@@ -19,6 +19,7 @@ import { questions as y2023 } from "./y2023";
 import { questions as y2024 } from "./y2024";
 import { questions as y2025 } from "./y2025";
 import { questions as y2026 } from "./y2026";
+import { ALL_MOCK_QUESTIONS, MOCK_YEAR } from "../mocks";
 
 /** 回忆版年份：考试太新、网上尚无完整真题资料，由回忆+改编题构成 */
 export const RECALL_YEARS: number[] = [2026];
@@ -42,11 +43,15 @@ export const ALL_QUESTIONS: Question[] = [
   ...y2024,
   ...y2025,
   ...y2026,
+  ...ALL_MOCK_QUESTIONS,
 ].sort((a, b) => a.year - b.year || a.subject.localeCompare(b.subject) || a.id.localeCompare(b.id));
 
 export const QUESTION_MAP = new Map(ALL_QUESTIONS.map((q) => [q.id, q]));
 
 export const YEARS = [...new Set(ALL_QUESTIONS.map((q) => q.year))].sort((a, b) => b - a);
+
+/** 真题年份（不含模拟卷 2027） */
+export const REAL_YEARS = YEARS.filter((y) => y !== MOCK_YEAR);
 
 export const ALL_TAGS = [
   ...new Set(ALL_QUESTIONS.flatMap((q) => q.tags)),
@@ -54,9 +59,16 @@ export const ALL_TAGS = [
 
 export function getQuestionsBy(filter: Partial<Record<"year" | "subject" | "type", unknown>>): Question[] {
   // year 用字符串比较：Select 传 "2023"、数据为数字 2023，避免类型不同导致漏匹配
+  // "m1"~"m10" 表示按模拟卷单套筛选；"2027"（MOCK_YEAR）为全部模拟卷
+  const yearMatch = (q: Question, v: unknown): boolean => {
+    if (v === undefined || v === null || v === "all") return true;
+    const s = String(v);
+    if (/^m([1-9]|10)$/.test(s)) return q.mockNo === Number(s.slice(1));
+    return String(q.year) === s;
+  };
   return ALL_QUESTIONS.filter(
     (q) =>
-      (filter.year === undefined || filter.year === null || filter.year === "all" || String(q.year) === String(filter.year)) &&
+      yearMatch(q, filter.year) &&
       (filter.subject === undefined || filter.subject === null || filter.subject === "all" || q.subject === filter.subject) &&
       (filter.type === undefined || filter.type === null || filter.type === "all" || q.type === filter.type)
   );

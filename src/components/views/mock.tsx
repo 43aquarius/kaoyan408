@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
+  FileStack,
   Flag,
   History,
   Layers,
@@ -14,6 +15,7 @@ import {
   RotateCcw,
   Settings2,
   Shuffle,
+  Star,
   Trash2,
   Trophy,
 } from "lucide-react";
@@ -30,16 +32,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Markdown } from "@/components/site/markdown";
+import { QuestionExtras } from "@/components/site/question-extras";
 import { SubjectBadge, TypeBadge, DifficultyBadge } from "@/components/site/badges";
 import { useApp } from "@/lib/store";
 import { useProgress } from "@/lib/client";
 import {
-  YEARS,
+  REAL_YEARS,
   QUESTION_MAP,
   getQuestionsBy,
   shuffle,
   type Question,
 } from "@/data/questions";
+import { MOCKS, getMockQuestions } from "@/data/mocks";
 import { SUBJECTS, SUBJECT_LIST } from "@/data/questions/types";
 import { cn } from "@/lib/utils";
 
@@ -397,16 +401,19 @@ function MockSetup({
   history: { id: string; title: string; score: number; totalScore: number; correctCnt: number; totalCnt: number; durationMs: number; createdAt: string }[];
   onDelete: (id: string) => void;
 }) {
-  const [mode, setMode] = useState<"year" | "smart">("year");
-  const [year, setYear] = useState<number>(YEARS[0]);
+  const [mode, setMode] = useState<"year" | "mock" | "smart">("year");
+  const [year, setYear] = useState<number>(REAL_YEARS[0]);
+  const [mockNo, setMockNo] = useState(1);
   const [subjects, setSubjects] = useState<string[]>(SUBJECT_LIST);
   const [count, setCount] = useState(20);
   const [customMinutes, setCustomMinutes] = useState<number | null>(null);
 
   const yearQuestions = useMemo(() => getQuestionsBy({ year }), [year]);
-  // 全量真题卷（47题/150分）自动建议考场时长 180 分钟；用户改过后尊重自定义值
-  const isFullPaper = mode === "year" && yearQuestions.length >= 40;
-  const yearScore = yearQuestions.reduce((a, b) => a + b.score, 0);
+  const mockQuestions = useMemo(() => getMockQuestions(mockNo), [mockNo]);
+  const selectedMock = MOCKS.find((m) => m.no === mockNo) ?? MOCKS[0];
+  // 全量卷（47题/150分）自动建议考场时长 180 分钟；用户改过后尊重自定义值
+  const isFullPaper = (mode === "year" && yearQuestions.length >= 40) || mode === "mock";
+  const yearScore = (mode === "mock" ? mockQuestions : yearQuestions).reduce((a, b) => a + b.score, 0);
   const minutes = customMinutes ?? (isFullPaper ? 180 : 45);
 
   const toggleSubject = (s: string) => {
@@ -418,6 +425,10 @@ function MockSetup({
       const ids = yearQuestions.map((q) => q.id);
       const score = yearQuestions.reduce((a, b) => a + b.score, 0);
       onStart(ids, `${year} 年真题模考（${ids.length}题/${score}分）`, minutes);
+    } else if (mode === "mock") {
+      const ids = mockQuestions.map((q) => q.id);
+      const score = mockQuestions.reduce((a, b) => a + b.score, 0);
+      onStart(ids, `${selectedMock.title}·${selectedMock.subtitle}（${ids.length}题/${score}分）`, minutes);
     } else {
       const pool = getQuestionsBy({ type: "single" }).filter((q) => subjects.includes(q.subject));
       const picked = shuffle(pool).slice(0, Math.min(count, pool.length));
@@ -440,9 +451,10 @@ function MockSetup({
 
       <div className="rounded-xl border bg-card p-5">
         {/* 模式选择 */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {[
             { key: "year" as const, label: "真题模考", desc: "整年原题 · 含应用题", icon: Layers },
+            { key: "mock" as const, label: "模拟卷", desc: "本站自研 · 逐项精讲", icon: FileStack },
             { key: "smart" as const, label: "智能组卷", desc: "随机单选 · 自由配置", icon: Shuffle },
           ].map((m) => (
             <button
@@ -467,7 +479,7 @@ function MockSetup({
             <div>
               <Label className="text-xs">选择年份</Label>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {YEARS.map((y) => (
+                {REAL_YEARS.map((y) => (
                   <button
                     key={y}
                     onClick={() => setYear(y)}
@@ -485,6 +497,41 @@ function MockSetup({
               {year} 年卷共 {yearQuestions.length} 题（
               {SUBJECT_LIST.map((s) => `${SUBJECTS[s].short} ${yearQuestions.filter((q) => q.subject === s).length}`).join(" · ")}
               ），合计 {yearQuestions.reduce((a, b) => a + b.score, 0)} 分
+            </p>
+          </div>
+        ) : mode === "mock" ? (
+          <div className="mt-5 space-y-4">
+            <div>
+              <Label className="text-xs">选择模拟卷（共 10 套 · 每套 47 题 / 150 分）</Label>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {MOCKS.map((m) => (
+                  <button
+                    key={m.no}
+                    onClick={() => setMockNo(m.no)}
+                    className={cn(
+                      "rounded-lg border p-3 text-left transition-all hover:-translate-y-0.5",
+                      mockNo === m.no
+                        ? "border-primary bg-accent/50 shadow-sm"
+                        : "hover:border-primary/40"
+                    )}
+                    aria-pressed={mockNo === m.no}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold">{m.title}</span>
+                      <span className="flex items-center gap-0.5 text-[11px] text-amber-500">
+                        {Array.from({ length: m.difficulty }).map((_, i) => (
+                          <Star key={i} className="h-3 w-3 fill-current" />
+                        ))}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 text-[11px] font-medium text-primary/80">{m.subtitle}</div>
+                    <div className="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">{m.focus}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              {selectedMock.title}·{selectedMock.subtitle}：{selectedMock.focus}。交卷后逐题精讲——每个选项都有对错原因，重点题配图示与逐步动画。
             </p>
           </div>
         ) : (
@@ -753,6 +800,9 @@ function MockResult({
                   )}
                   <div className="text-sm font-semibold">解析</div>
                   <Markdown content={q.analysis} />
+                  <div className="mt-3">
+                    <QuestionExtras q={q} />
+                  </div>
                 </div>
               </details>
             </div>

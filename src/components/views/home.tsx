@@ -21,7 +21,8 @@ import { GitHubCounter } from "@/components/site/github-counter";
 import { SubjectBadge } from "@/components/site/badges";
 import { useApp } from "@/lib/store";
 import { useProgress } from "@/lib/client";
-import { ALL_QUESTIONS, YEARS, getQuestionsBy } from "@/data/questions";
+import { ALL_QUESTIONS, REAL_YEARS, getQuestionsBy } from "@/data/questions";
+import { ALL_MOCK_QUESTIONS, MOCKS } from "@/data/mocks";
 import { SUBJECTS, SUBJECT_LIST } from "@/data/questions/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,7 @@ const HERO_PHRASES = [
 export function HomeView() {
   const { go, startPractice } = useApp();
   const { data } = useProgress();
-  const years = [...YEARS].sort((a, b) => a - b);
+  const years = [...REAL_YEARS].sort((a, b) => a - b);
   const latestYear = years[years.length - 1];
   const attemptedPct = ALL_QUESTIONS.length > 0 ? Math.round((data.attempted / ALL_QUESTIONS.length) * 100) : 0;
   const accuracy = data.attempted > 0 ? Math.round((data.correct / data.attempted) * 100) : 0;
@@ -59,7 +60,7 @@ export function HomeView() {
             <div className="max-w-2xl space-y-5">
               <div className="inline-flex items-center gap-1.5 rounded-full border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
-                {YEARS.length} 年真题 · {ALL_QUESTIONS.length} 道原题 · 全科目覆盖
+                {REAL_YEARS.length} 年真题 + {MOCKS.length} 套全真模拟 · {ALL_QUESTIONS.length} 道题 · 逐项解析
               </div>
               <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
                 <span className="text-primary">#</span> Hi, 考研人
@@ -70,7 +71,7 @@ export function HomeView() {
                 />
               </h1>
               <p className="max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-                这里收录了 {years[0]}–{latestYear} 年考研 408 统考的真题原题与详解。
+                这里收录了 {years[0]}–{latestYear} 年考研 408 统考真题原题，以及 {MOCKS.length} 套本站自研全真模拟卷（每题逐项解析 + 图示/动画讲解）。
                 刷题、模考、错题回顾、数据统计——用一个程序员的专注，把 150 分的每一步都踩实。
               </p>
               <div className="flex flex-wrap gap-3 pt-1">
@@ -98,8 +99,7 @@ export function HomeView() {
               </div>
               <GitHubCounter />
               <div className="rounded-xl border border-dashed p-4 text-xs leading-relaxed text-muted-foreground">
-                题库规模 <strong className="text-foreground">{ALL_QUESTIONS.length}</strong> 题 ·
-                覆盖 <strong className="text-foreground">{YEARS.length}</strong> 个年份 ·
+                题库规模 <strong className="text-foreground">{ALL_QUESTIONS.length}</strong> 题（真题 {ALL_QUESTIONS.length - ALL_MOCK_QUESTIONS.length} + 模拟 {ALL_MOCK_QUESTIONS.length}） ·
                 你的正确率 <strong className="text-primary">{accuracy}%</strong>
               </div>
             </div>
@@ -285,7 +285,7 @@ export function HomeView() {
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <CalendarDays className="h-4 w-4" />
             <Database className="h-4 w-4" />
-            数据保存在本地浏览器服务中
+            登录后做题记录云端保存
           </div>
         </div>
       </section>
